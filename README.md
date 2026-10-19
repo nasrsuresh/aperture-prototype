@@ -51,11 +51,11 @@ the matching experiment file.
 
 ### Phase 0: account
 
-- [ ] `personal` profile configured; `npm run whoami` shows `163395467013`
-- [ ] Lambda concurrency quota read; increase to 1,000 requested if below 100
+- [x] `personal` profile configured; `npm run whoami` shows `163395467013` (2026-10-19)
+- [x] Lambda concurrency quota read: **10**. Increase to 1,000 requested, request id `04f27c7dd03d4a1f9fe8366bbac24d6cGRjJ7SOV`, status PENDING (2026-10-19). Until approved: no reserved concurrency possible, `MaxConcurrency` kept at 3, A6/E7 wait.
 - [ ] $10 budget alert
-- [ ] `cdk bootstrap`
-- [ ] First deploy of the empty stack
+- [x] `cdk bootstrap` (2026-10-19)
+- [x] First deploy of the empty stack: `CREATE_COMPLETE` in 11 s (2026-10-19)
 
 ### Phase 1: Scenario A
 
