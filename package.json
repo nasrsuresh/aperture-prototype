@@ -5,7 +5,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "AWS_PROFILE=personal cdk",
+    "whoami": "AWS_PROFILE=personal aws sts get-caller-identity"
   },
   "devDependencies": {
     "@swc/core": "^1.15.0",

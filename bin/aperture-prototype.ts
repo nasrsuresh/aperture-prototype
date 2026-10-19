@@ -2,19 +2,15 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { AperturePrototypeStack } from '../lib/aperture-prototype-stack';
 
+// Guardrail 1: the stack is pinned to the personal account and region.
+// If the active credentials resolve to any other account, `cdk deploy` refuses
+// with "Need to perform AWS calls for account 163395467013, but the current
+// credentials are for <other>". This can never deploy into a work account.
+export const PERSONAL_ACCOUNT = '163395467013';
+export const REGION = 'us-east-1';
+
 const app = new cdk.App();
 new AperturePrototypeStack(app, 'AperturePrototypeStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
-
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
-
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+  env: { account: PERSONAL_ACCOUNT, region: REGION },
+  description: 'Aperture architecture prototype (Scenario A bulk pipeline + Scenario B marketplace slice)',
 });

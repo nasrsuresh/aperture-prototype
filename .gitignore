@@ -6,3 +6,13 @@ node_modules
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+
+# Local-only: deployed stack outputs, test images, experiment scratch
+.env
+.env.*
+outputs.json
+experiments/scratch/
+*.local.*
+
+# OS
+.DS_Store
