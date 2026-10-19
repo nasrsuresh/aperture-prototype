@@ -3,9 +3,9 @@
 This document is for an independent reviewer (person or agent) asked to check
 what was built and run the tests. It lists what exists, how to verify it at
 three levels of effort, what numbers to expect, and what is known to be
-simplified. The README is the narrative; this is the checklist. If the
-reviewer is an agent, `REVIEWER-PROMPT.md` in this directory is a paste-ready
-brief that walks it through the checklist and asks for a report.
+simplified. The README is the narrative; this is the checklist. `TESTER-PROMPT.md` in
+this directory is a paste-ready brief for an agent that should run the tests
+and report pass/fail.
 
 ## 1. What this is
 

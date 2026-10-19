@@ -122,7 +122,7 @@ filters-3p/     the third-party filter: Python 3.12 + Pillow, Dockerfile, filter
 cli/            aperture.ts (commands), demo.ts, lib/ (api, upload, table, trace, rerun)
 test/           jest unit tests (esbuild transformer)
 experiments/    E01..E13 write-ups, demo log, e1-presigned-put.ts
-docs/           diagrams, REVIEWER-GUIDE.md (inventory + verification checklist), REVIEWER-PROMPT.md (paste-ready brief for an independent reviewer), ts-reading-guide.md
+docs/           diagrams, REVIEWER-GUIDE.md (inventory + verification checklist), TESTER-PROMPT.md (paste-ready brief for a tester agent), ts-reading-guide.md
 ```
 
 ## Where the prototype differs from the design, and why
