@@ -3,7 +3,6 @@ module.exports = {
   roots: ['<rootDir>/test'],
   testMatch: ['**/*.test.ts'],
   transform: {
-    '^.+\\.tsx?$': ['@swc/jest']
+    '^.+\\.tsx?$': '<rootDir>/test/esbuild-transformer.js',
   },
-  setupFilesAfterEnv: ['aws-cdk-lib/testhelpers/jest-autoclean'],
 };

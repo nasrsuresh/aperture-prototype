@@ -7,12 +7,9 @@ export interface ApiResult<T = unknown> {
   ms: number;
 }
 
-export async function api<T = unknown>(
-  cfg: Config,
-  method: 'GET' | 'POST',
-  path: string,
-  body?: unknown,
-): Promise<ApiResult<T>> {
+export type Method = 'GET' | 'POST' | 'PUT';
+
+export async function api<T = unknown>(cfg: Config, method: Method, path: string, body?: unknown): Promise<ApiResult<T>> {
   const t0 = Date.now();
   const res = await fetch(`${cfg.apiUrl}${path}`, {
     method,
@@ -37,3 +34,11 @@ export function print(label: string, r: ApiResult): void {
   console.log(`${label} -> ${r.status} (${r.ms} ms)`);
   console.log(typeof r.body === 'string' ? r.body : JSON.stringify(r.body, null, 2));
 }
+
+export function expect(r: ApiResult, ...statuses: number[]): void {
+  if (!statuses.includes(r.status)) {
+    throw new Error(`expected ${statuses.join('/')}, got ${r.status}: ${JSON.stringify(r.body)}`);
+  }
+}
+
+export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

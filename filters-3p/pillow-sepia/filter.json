@@ -1,0 +1,14 @@
+{
+  "name": "sepia-3p",
+  "version": "1.0.0",
+  "contractVersion": 1,
+  "params": {
+    "properties": {
+      "intensity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 }
+    },
+    "required": []
+  },
+  "input": { "formats": ["jpeg", "png"], "maxBytes": 26214400 },
+  "output": { "format": "jpeg", "maxBytes": 52428800 },
+  "limits": { "timeoutSec": 60, "memoryMb": 1024 }
+}

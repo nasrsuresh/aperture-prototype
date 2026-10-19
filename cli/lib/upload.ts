@@ -56,9 +56,22 @@ export async function postOne(p: PresignedPost, bytes: Buffer): Promise<{ status
   return { status: res.status, etag: res.headers.get('etag') ?? undefined, text };
 }
 
-export async function uploadFiles(cfg: Config, batchId: string, paths: string[]): Promise<UploadResult[]> {
+// Re-upload one image under its existing imageId (fix a bad file, then
+// retry-failed). Returns the presigned POST from the per-image route.
+export async function requestReuploadUrl(cfg: Config, batchId: string, imageId: string): Promise<PresignedPost> {
+  const r = await api<{ urls: PresignedPost[] }>(cfg, 'POST', `/batches/${batchId}/images/${imageId}/upload-url`);
+  if (r.status !== 200) throw new Error(`upload-url failed: ${r.status} ${JSON.stringify(r.body)}`);
+  return r.body.urls[0];
+}
+
+export async function uploadFiles(
+  cfg: Config,
+  batchId: string,
+  paths: string[],
+  presignedOverride?: PresignedPost[],
+): Promise<UploadResult[]> {
   const filenames = paths.map((p) => basename(p));
-  const presigned = await requestUploadUrls(cfg, batchId, filenames);
+  const presigned = presignedOverride ?? (await requestUploadUrls(cfg, batchId, filenames));
   const byName = new Map(presigned.map((p) => [p.filename, p]));
 
   const queue = [...paths];

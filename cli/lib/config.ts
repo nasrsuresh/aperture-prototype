@@ -10,6 +10,7 @@ export interface Config {
   maxUploadBytes: number;
   orgId: string;
   apiKey: string;
+  outputs: Record<string, string>; // every stack output, for ad-hoc lookups
 }
 
 export function loadConfig(): Config {
@@ -25,5 +26,6 @@ export function loadConfig(): Config {
     maxUploadBytes: Number(stack.MaxUploadBytes),
     orgId: process.env.APERTURE_ORG ?? 'acme',
     apiKey: process.env.APERTURE_API_KEY ?? 'dev-key',
+    outputs: stack,
   };
 }

@@ -9,6 +9,7 @@ import { validatePipeline } from '../shared/filters';
 import { HttpError, json, parseBody } from '../shared/http';
 import { newId, nowIso, pk, sk } from '../shared/keys';
 import type { PipelineItem, PipelineSnapshot, PipelineVersionItem } from '../shared/types';
+import { resolverFor } from './marketplace';
 
 interface PostPipelineBody {
   pipelineId?: string; // omit to create; include to save a new version
@@ -18,8 +19,9 @@ interface PostPipelineBody {
 
 export async function postPipeline(orgId: string, event: APIGatewayProxyEventV2) {
   const body = parseBody<PostPipelineBody>(event);
-  // Validation happens before any write: a broken pipeline never gets a version.
-  const steps = validatePipeline(body.steps);
+  // Validation happens before any write: a broken pipeline never gets a
+  // version. Marketplace steps resolve through the registry (Scenario B).
+  const steps = await validatePipeline(body.steps, resolverFor(orgId));
   const pipelineId = body.pipelineId ?? newId('pipe');
   const now = nowIso();
 

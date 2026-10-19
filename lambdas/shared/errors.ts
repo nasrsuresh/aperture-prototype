@@ -7,11 +7,21 @@
 // this file and the state machine definition.
 import type { ErrorClass } from './types';
 
+// Lambda reports only `errorType` (= name) and `errorMessage` (= message) to
+// Step Functions, so the class rides in the message as a prefix:
+// "input: unsupported image format". RecordFailure parses it back out.
+const CLASS_PREFIX = /^(input|platform|filter): /;
+
+export function parseClassFromMessage(message: string): ErrorClass | undefined {
+  const m = CLASS_PREFIX.exec(message);
+  return m ? (m[1] as ErrorClass) : undefined;
+}
+
 export class RetryableError extends Error {
   readonly cls: ErrorClass;
   readonly retryable = true;
   constructor(cls: ErrorClass, message: string) {
-    super(message);
+    super(CLASS_PREFIX.test(message) ? message : `${cls}: ${message}`);
     this.name = 'RetryableError';
     this.cls = cls;
   }
@@ -21,7 +31,7 @@ export class TerminalError extends Error {
   readonly cls: ErrorClass;
   readonly retryable = false;
   constructor(cls: ErrorClass, message: string) {
-    super(message);
+    super(CLASS_PREFIX.test(message) ? message : `${cls}: ${message}`);
     this.name = 'TerminalError';
     this.cls = cls;
   }
