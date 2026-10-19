@@ -66,7 +66,10 @@ export class Marketplace extends Construct {
     s3Endpoint.addToPolicy(
       new iam.PolicyStatement({
         principals: [new iam.AnyPrincipal()],
-        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+        // PutObjectTagging: ValidateOutput tags intermediate outputs for the
+        // lifecycle rule (E9 found this one: a mid-pipeline marketplace step
+        // failed with "no VPC endpoint policy allows s3:PutObjectTagging").
+        actions: ['s3:GetObject', 's3:PutObject', 's3:PutObjectTagging', 's3:DeleteObject'],
         resources: [storage.bucket.arnForObjects('*')],
       }),
     );

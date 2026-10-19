@@ -228,6 +228,7 @@ export interface ChildState {
   // Set by Catch
   failure?: { Error: string; Cause: string };
   failedState?: string;
+  attempts?: number;
   lastResult?: unknown;
 }
 

@@ -79,8 +79,9 @@ export const handler = async (event: ChildState) => {
   const advance = await advanceStep(orgId, imageId, stepNumber, isLast);
 
   // 4. Metering. Keyed on invocationId = (org, batch, image, step); the
-  //    attempt is an attribute. A duplicate attempt hits the condition and is
-  //    treated as success: a retried-but-successful step bills once.
+  //    attempt is an attribute. A success may replace an earlier error record
+  //    for the same step (a retry run that passed), but never another
+  //    success: a retried-but-successful step bills exactly once.
   const month = yyyymm();
   const item: InvocationItem = {
     PK: pk.orgMonth(orgId, month),
@@ -108,7 +109,13 @@ export const handler = async (event: ChildState) => {
   let metering: 'recorded' | 'duplicate' = 'recorded';
   try {
     await ddb.send(
-      new PutCommand({ TableName: env.TABLE_NAME, Item: item, ConditionExpression: 'attribute_not_exists(SK)' }),
+      new PutCommand({
+        TableName: env.TABLE_NAME,
+        Item: item,
+        ConditionExpression: 'attribute_not_exists(SK) OR #st = :error',
+        ExpressionAttributeNames: { '#st': 'status' },
+        ExpressionAttributeValues: { ':error': 'error' },
+      }),
     );
   } catch (e) {
     if ((e as { name?: string }).name !== 'ConditionalCheckFailedException') throw classify(e);

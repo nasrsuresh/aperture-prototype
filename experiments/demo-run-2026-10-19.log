@@ -1,0 +1,173 @@
+
+==============================================================================
+Scenario A: bulk pipeline
+==============================================================================
+    20 test images in experiments/scratch/demo (~2 MB each). img-008.png is 2 MB of random bytes, not an image.
+
+--- 1. Pipeline (A Decision 3): validated at save, stored as an immutable version
+    a pipeline with sigma=999 -> 400 {"code":"invalid_input","message":"input: filter 'blur': param 'sigma' must be in [0.3, 50]"}
+    pipeline pipe_4b2b4b05e552 v1: grayscale -> fail-inject(img-007) -> resize(800)
+
+--- 2. Batch + presigned POST uploads (A Decision 1): zero image bytes through the API
+    20/20 uploaded straight to S3 in 30635 ms (each URL carries a signed content-length-range policy)
+
+--- 3. Submit (Fact 9: S3 does not notify; we list and reconcile), then the Distributed Map runs
+    202: run run_a52fb3405002, parent execution started; every image is its own child execution
+    20:34:40  batch=running   images={"total":20,"uploaded":20}  mapRun=RUNNING running=0 ok=0 failed=0
+    20:34:46  batch=running   images={"total":20,"processed":18,"failed":2}  mapRun=RUNNING running=2 ok=17 failed=1
+    20:34:52  batch=completed images={"total":20,"processed":18,"failed":2}
+    batch counts after run 1: {"failed":2,"succeeded":18,"total":20}
+
+--- 4. Failures are classified (A Decision 4): {step, class, retryable, attempts}
+    img-007.png: {"attempts":3,"class":"platform","message":"platform: fail-inject: transient failure, attempt 3","retryable":true,"step":2}
+    img-008.png: {"attempts":1,"class":"input","message":"input: Input buffer contains unsupported image format","retryable":false,"step":1}
+
+---    execution timeline for img-007 (3 attempts, 2 s then 4 s backoff, then RecordFailure)
+execution batch_ac2dafbad384-img_3c952e58130a-run_a52fb3405002  status=FAILED
+     0.02s  enter                SelectStep         
+     0.02s  enter                RouteStep          
+     0.02s  enter                RunStep            
+     0.02s  attempt              RunStep            
+     1.79s  ok                   RunStep            
+     1.81s  enter                AdvanceStep        
+     1.81s  enter                Done?              
+     1.81s  enter                SelectStep         
+     1.81s  enter                RouteStep          
+     1.81s  enter                RunStep            
+     1.81s  attempt              RunStep            
+     1.99s  failed               RunStep            RetryableError: platform: fail-inject: transient failure, attempt 1
+     2.00s  attempt              RunStep            
+     2.19s  failed               RunStep            RetryableError: platform: fail-inject: transient failure, attempt 2
+     4.24s  attempt              RunStep            
+     4.41s  failed               RunStep            RetryableError: platform: fail-inject: transient failure, attempt 3
+     4.42s  enter                RecordFailure      
+     4.42s  attempt              RecordFailure      
+     4.59s  ok                   RecordFailure      
+     4.65s  enter                ImageFailed        
+     4.68s  EXECUTION FAILED                        RetryableError: platform: fail-inject: transient failure, attempt 3
+
+---    execution timeline for img-008 (TerminalError: one attempt, no retry)
+execution batch_ac2dafbad384-img_4f38b3616e88-run_a52fb3405002  status=FAILED
+     0.02s  enter                SelectStep         
+     0.02s  enter                RouteStep          
+     0.02s  enter                RunStep            
+     0.02s  attempt              RunStep            
+     1.48s  failed               RunStep            TerminalError: input: Input buffer contains unsupported image format
+     1.49s  enter                RecordFailure      
+     1.49s  attempt              RecordFailure      
+     1.84s  ok                   RecordFailure      
+     1.85s  enter                ImageFailed        
+     1.88s  EXECUTION FAILED                        TerminalError: input: Input buffer contains unsupported image format
+
+--- 5. Fix and retry (A Decision 4): re-upload img-008, retry only the failed images
+    img-008 re-uploaded under the same imageId: http 204, new ETag "3429e00d33e210dd16cdbefb45eee6d9"
+    retry run contains 2 images (not 20): img_3c952e58130a, img_4f38b3616e88
+    20:34:59  batch=running   images={"total":20,"processed":18,"uploaded":2}  mapRun=RUNNING running=0 ok=0 failed=0
+    20:35:05  batch=completed images={"total":20,"processed":20}
+    batch counts after retry: {"failed":0,"succeeded":20,"total":20}
+
+---    img-007 on retry: step 1 output already exists for the same sourceETag -> skipped; step 2 now passes
+execution batch_ac2dafbad384-img_3c952e58130a-run_0a4fd9bf85df  status=SUCCEEDED
+     0.02s  enter                SelectStep         
+     0.02s  enter                RouteStep          
+     0.02s  enter                RunStep            
+     0.02s  attempt              RunStep            
+     0.22s  ok                   RunStep            
+     0.24s  enter                AdvanceStep        
+     0.24s  enter                Done?              
+     0.24s  enter                SelectStep         
+     0.24s  enter                RouteStep          
+     0.24s  enter                RunStep            
+     0.24s  attempt              RunStep            
+     0.61s  ok                   RunStep            
+     0.62s  enter                AdvanceStep        
+     0.62s  enter                Done?              
+     0.62s  enter                SelectStep         
+     0.62s  enter                RouteStep          
+     0.62s  enter                RunStep            
+     0.62s  attempt              RunStep            
+     0.94s  ok                   RunStep            
+     0.96s  enter                AdvanceStep        
+     0.96s  enter                Done?              
+     0.96s  enter                ImageDone          
+     0.99s  EXECUTION SUCCEEDED                     
+
+---    img-008 on retry: new sourceETag -> nothing reused, all 3 steps run
+execution batch_ac2dafbad384-img_4f38b3616e88-run_0a4fd9bf85df  status=SUCCEEDED
+     0.02s  enter                SelectStep         
+     0.02s  enter                RouteStep          
+     0.02s  enter                RunStep            
+     0.02s  attempt              RunStep            
+     0.39s  ok                   RunStep            
+     0.41s  enter                AdvanceStep        
+     0.41s  enter                Done?              
+     0.41s  enter                SelectStep         
+     0.41s  enter                RouteStep          
+     0.41s  enter                RunStep            
+     0.41s  attempt              RunStep            
+     0.68s  ok                   RunStep            
+     0.70s  enter                AdvanceStep        
+     0.70s  enter                Done?              
+     0.70s  enter                SelectStep         
+     0.70s  enter                RouteStep          
+     0.70s  enter                RunStep            
+     0.70s  attempt              RunStep            
+     1.00s  ok                   RunStep            
+     1.02s  enter                AdvanceStep        
+     1.02s  enter                Done?              
+     1.02s  enter                ImageDone          
+     1.05s  EXECUTION SUCCEEDED                     
+
+--- 6. Results: paged presigned GETs for the final step
+    first page: 5 items, 5 with URLs, nextCursor present
+    GET one result URL -> 200 image/jpeg, 398323 bytes, 800x800 jpeg (grayscale, resized to 800)
+
+==============================================================================
+Scenario B: marketplace filter in the isolated boundary
+==============================================================================
+
+--- 7. Registry, org policy, entitlement (B Decision 5 and 6)
+    registered sepia-3p, sepia-3p-hostile, sepia-3p-liar (same container image, FILTER_MODE differs)
+    with allowThirdPartyFilters=false, saving a marketplace pipeline -> 403 {"code":"third_party_disabled","message":"third-party filters are disabled for this organization"}
+    org acme-noent (policy on, no entitlement): POST /images sepia-3p -> 402 {"code":"no_entitlement","message":"organization has no entitlement for filter sepia-3p"}
+    entitlements created for all three
+
+--- 8. POST /images with a marketplace filter -> 202 + status URL (B Decision 1), same code path as a batch step
+    202 {"imageId":"img_5bf4fba65684","status":"processing","statusUrl":"/images/img_5bf4fba65684","executionArn":"arn:aws:states:us-east-1:163395467013:execution:aperture-proto-image:single-img_5bf4fba65684-run_00d9a44cc653"}
+    20:35:16  image img_5bf4fba65684 status=processing
+    20:35:19  image img_5bf4fba65684 status=processed
+    child execution output: {"imageId":"img_5bf4fba65684","stepCount":1,"lastResult":{"outputKey":"acme/single/derived/img_5bf4fba65684/1","skipped":false,"advance":"advanced","invocationId":"1d8af589848dfb52db55f8e522376eae","metering":"recorded","filterMetrics":{"mode":"sepia","ms":419}}}
+    GET result URL -> 200, 61885 bytes, 300x300 jpeg (re-encoded by ValidateOutput, not the filter’s bytes)
+
+--- 9. Hostile filter (B Decision 3): tries internet, S3 ListBucket, DynamoDB, another bucket
+    20:35:22  image img_5fce8897467a status=processing
+    20:35:26  image img_5fce8897467a status=processing
+    20:35:29  image img_5fce8897467a status=processing
+    20:35:32  image img_5fce8897467a status=processed
+    internet     blocked: URLError: <urlopen error [Errno 99] Cannot assign requested address>
+    listBucket   denied: AccessDenied: An error occurred (AccessDenied) when calling the ListObjectsV2 operation: User: arn:aws:sts::163395
+    dynamodb     denied: ClientError: An error occurred (AccessDeniedException) when calling the ListTables operation: User: arn:aws:sts::
+    otherBucket  denied: ClientError: An error occurred (403) when calling the HeadBucket operation: Forbidden
+
+--- 10. Liar filter (B Decision 2): says ok, writes nothing -> ValidateOutput fails it, class=filter
+    20:35:34  image img_8f3d8b214b41 status=processing
+    20:35:38  image img_8f3d8b214b41 status=failed
+    image error: {"attempts":1,"class":"filter","message":"filter: reported ok but wrote no output object","retryable":false,"step":1}
+
+--- 11. Metering (B Decision 5): one Invocation per (image, step); a duplicate success bills once
+    ValidateOutput invoked a second time with the same payload: {"outputKey":"acme/single/derived/img_5bf4fba65684/1","skipped":false,"advance":"duplicate","invocationId":"1d8af589848dfb52db55f8e522376eae","metering":"duplicate","filterMetrics":{"mode":"sepia","ms":419}}
+    sepia-3p           image img_5bf4fba65684 attempt 1 status=ok billable=true
+    sepia-3p-liar      image img_8f3d8b214b41 attempt 1 status=error billable=false errorClass=filter
+    sepia-3p-hostile   image img_5fce8897467a attempt 1 status=ok billable=true
+
+==============================================================================
+Summary (96 s)
+==============================================================================
+    run 1: {"failed":2,"succeeded":18,"total":20} (expected 18 ok, 2 failed)
+    retry: {"failed":0,"succeeded":20,"total":20} (expected 20 ok, 0 failed)
+    marketplace sepia-3p: processed
+    hostile filter: image processed; probes: all blocked
+    liar filter: image failed, error class filter
+    invocation records for the 3 single requests: 3 (expected 3: ok, ok, error)
+    batch batch_ac2dafbad384; pipeline pipe_4b2b4b05e552@1
+    Step Functions console: aperture-proto-batch (parent), aperture-proto-image (children)

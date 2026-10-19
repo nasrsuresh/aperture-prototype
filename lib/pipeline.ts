@@ -121,8 +121,10 @@ export class Pipeline extends Construct {
     // output merges the result back into the state. `$states.input` is the
     // state's input, `$states.result` the Lambda's return value.
     const payload = sfn.TaskInput.fromText("{% $merge([$states.input, {'executionArn': $states.context.Execution.Id}]) %}");
+    // RetryCount is how many retries the state made before giving up, so the
+    // recorded attempt count is exact whatever the Retry list says.
     const catchOutput = (state: string) =>
-      `{% $merge([$states.input, {'failure': $states.errorOutput, 'failedState': '${state}'}]) %}`;
+      `{% $merge([$states.input, {'failure': $states.errorOutput, 'failedState': '${state}', 'attempts': $states.context.State.RetryCount + 1}]) %}`;
 
     const recordFailure = tasks.LambdaInvoke.jsonata(this, 'RecordFailure', {
       lambdaFunction: this.recordFailureFn,

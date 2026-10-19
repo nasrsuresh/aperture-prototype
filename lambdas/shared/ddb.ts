@@ -42,14 +42,16 @@ export async function advanceStep(
   }
 }
 
-export async function markFailed(orgId: string, imageId: string, error: ImageError): Promise<void> {
+export async function markFailed(orgId: string, imageId: string, error: ImageError, executionArn?: string): Promise<void> {
   await ddb.send(
     new UpdateCommand({
       TableName: env.TABLE_NAME,
       Key: { PK: pk.org(orgId), SK: sk.image(imageId) },
-      UpdateExpression: 'SET #s = :failed, #e = :error',
+      // executionArn is set here too, so an image that never reached a step
+      // (throttled before its first attempt) is still traceable.
+      UpdateExpression: executionArn ? 'SET #s = :failed, #e = :error, executionArn = :arn' : 'SET #s = :failed, #e = :error',
       ExpressionAttributeNames: { '#s': 'status', '#e': 'error' },
-      ExpressionAttributeValues: { ':failed': 'failed', ':error': error },
+      ExpressionAttributeValues: { ':failed': 'failed', ':error': error, ...(executionArn ? { ':arn': executionArn } : {}) },
     }),
   );
 }

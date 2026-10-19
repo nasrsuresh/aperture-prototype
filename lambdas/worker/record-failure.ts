@@ -58,15 +58,18 @@ export function interpretFailure(failure: { Error: string; Cause: string }, fail
 
 export type ImageErrorParts = Omit<ImageError, 'step'>;
 
-export const handler = async (event: ChildState) => {
+export const handler = async (event: ChildState & { executionArn?: string }) => {
   const { orgId, batchId, imageId, stepIndex } = event;
   const step = event.step ?? event.steps[stepIndex];
   const stepNumber = stepIndex + 1;
   const failure = event.failure ?? { Error: 'Unknown', Cause: 'no failure object in state' };
   const parts = interpretFailure(failure, event.failedState);
-  const error: ImageError = { step: stepNumber, ...parts };
+  // The state machine passes the real attempt count (RetryCount + 1) in the
+  // Catch output; interpretFailure's number is the fallback.
+  const attempts = typeof event.attempts === 'number' ? event.attempts : parts.attempts;
+  const error: ImageError = { step: stepNumber, ...parts, attempts };
 
-  await markFailed(orgId, imageId, error);
+  await markFailed(orgId, imageId, error, event.executionArn);
 
   // Marketplace metering from the failure path. Conditional put: never
   // overwrite a record from a successful attempt.
