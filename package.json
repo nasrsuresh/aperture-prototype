@@ -6,20 +6,32 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "AWS_PROFILE=personal cdk",
-    "whoami": "AWS_PROFILE=personal aws sts get-caller-identity"
+    "deploy": "AWS_PROFILE=personal cdk deploy --require-approval never --outputs-file outputs.json",
+    "whoami": "AWS_PROFILE=personal aws sts get-caller-identity",
+    "layer:sharp": "cd layers/sharp/nodejs && npm install --os=linux --cpu=arm64 --libc=glibc sharp",
+    "cli": "NODE_NO_WARNINGS=1 AWS_PROFILE=personal tsx cli/aperture.ts",
+    "cli:gen": "NODE_NO_WARNINGS=1 tsx cli/gen-images.ts"
   },
   "devDependencies": {
     "@swc/core": "^1.15.0",
     "@swc/jest": "^0.2.39",
+    "@types/aws-lambda": "^8.10.164",
     "@types/jest": "^30",
     "@types/node": "^24.10.1",
-    "jest": "^30",
     "aws-cdk": "2.1145.0",
+    "esbuild": "^0.28.2",
+    "jest": "^30",
     "tsx": "^4.23.0",
     "typescript": "~7.0.2"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1152.0",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/lib-dynamodb": "^3.1152.0",
+    "@aws-sdk/s3-presigned-post": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "aws-cdk-lib": "^2.272.0",
-    "constructs": "^10.5.0"
+    "constructs": "^10.5.0",
+    "sharp": "^0.35.5"
   }
 }
