@@ -4,6 +4,13 @@ Open a new agent chat with `~/aperture-prototype` as the workspace, with Docker
 Desktop running, and paste everything below the line as the first message.
 Takes about an hour; AWS cost is roughly nothing.
 
+This prompt was run once, on 20 Oct 2026, against the live stack: 35 checks
+passed, 0 failed, 1 could not be reproduced (E10's error-to-ok metering
+upgrade). The stack was torn down on 21 Oct 2026. To run the prompt again,
+deploy first (`npm run cdk -- bootstrap`, then `npm run deploy`; see the
+README), so that `outputs.json` exists and the sentence "the stack is already
+deployed" below is true.
+
 ---
 
 Test this project end to end and tell me what passes and what fails.

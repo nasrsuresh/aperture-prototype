@@ -10,6 +10,11 @@ makes has an experiment under `experiments/` with the command, the output, and
 an explanation. `npm run demo` runs the main path end to end in about 100 s;
 the log of the last run is `experiments/demo-run-2026-10-19.log`.
 
+**Status (21 Oct 2026):** the stack was torn down after the review, so there
+is no live endpoint. The experiment write-ups and logs were produced while it
+was running (17–20 Oct 2026). To bring it back, follow "Running it" below;
+the first deploy takes about ten minutes.
+
 ## What it does, in one paragraph
 
 A customer saves a **pipeline** (an ordered list of filters with parameters);
@@ -87,10 +92,15 @@ profile named `personal` for account `163395467013`. All npm scripts force
 ```
 npm install
 npm run layer:sharp        # once: sharp binaries for linux/arm64
+npm run cdk -- bootstrap   # once per account: CDK's asset bucket and container registry (~2 min)
 npm run deploy             # ~8 min first time (VPC + container image), ~1.5 min after
 npm test                   # 22 unit tests: error taxonomy, skip rule, pipeline validation
 npm run demo               # Scenario A + B end to end, ~100 s
 ```
+
+`npm run deploy` writes `outputs.json` (gitignored); the CLI and the demo read
+the API URL and resource names from it. The SNS email subscription must be
+confirmed once from the inbox before completion emails arrive.
 
 The CLI (`npm run cli -- <command>`) drives every API route and reads table
 and execution state; the command list is at the top of `cli/aperture.ts`.
@@ -149,8 +159,20 @@ Lambda, S3, DynamoDB, API Gateway, SNS: free tier at this scale. Step
 Functions Standard: a 20-image, 3-step batch is about 600 state transitions
 (4,000 free per month, then $0.025 per 1,000). VPC without NAT, gateway
 endpoints: $0. ECR: ~$0.10/GB-month for the filter image. A $10 budget alert
-is set on the account. `npm run cdk -- destroy` removes everything, including
-the bucket contents.
+is set on the account. Total spend for the whole build, thirteen experiments,
+one independent test run and the teardown: $0.14.
+
+Tearing down to zero takes three steps, because CDK keeps log groups and its
+own bootstrap resources by default:
+
+```
+npm run cdk -- destroy                       # the stack, including bucket contents and the table (~20 min; VPC ENIs are slow to release)
+# CloudWatch log groups are retained by CDK; delete the ones named AperturePrototypeStack-* and /aws/lambda/aperture-3p-*
+# CDK bootstrap: empty the cdk-hnb659fds-assets-* bucket, delete the cdk-hnb659fds-container-assets-* ECR repository, delete the CDKToolkit stack
+```
+
+After this the account has no stack, function, table, state machine, API,
+topic, VPC, endpoint, log group or repository left from the project.
 
 ## Account guardrails
 
